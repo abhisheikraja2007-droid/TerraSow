@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AgriControl Pro</title>
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root { 
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --primary-green: #14532d;
+      --accent-green: #22c55e;
+      --danger-red: #dc2626;
+      --border-dark: #0f172a;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; background-color: var(--bg-color); color: var(--text-main); user-select: none; 
+    }
+
+    .app-container {
+      max-width: 480px; margin: 0 auto; background: var(--bg-color); 
+      min-height: 100vh; position: relative; padding-bottom: 80px; 
+    }
+
+    header { 
+      display: flex; justify-content: space-between; align-items: center; 
+      padding: 16px 20px; background: var(--card-bg); 
+      border-bottom: 2px solid var(--border-dark);
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { margin: 0; font-size: 20px; font-weight: 900; }
+    .icon-btn { font-size: 24px; cursor: pointer; background: none; border: none; padding: 0; }
+
+    .content { padding: 20px; }
+    .page-title { font-size: 26px; font-weight: 900; text-transform: uppercase; text-align: center; margin-bottom: 24px; letter-spacing: 1px; }
+    
+    .tab-section { display: none; animation: fadeIn 0.2s ease; }
+    .tab-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card { 
+      background: var(--card-bg); border: 2px solid var(--border-dark); 
+      border-radius: 12px; padding: 20px; margin-bottom: 20px; 
+      box-shadow: 4px 4px 0px var(--border-dark); 
+    }
+
+    .dpad-card { display: flex; justify-content: center; align-items: center; padding: 30px 20px; }
+    .d-pad { display: grid; grid-template-columns: repeat(3, 75px); grid-template-rows: repeat(3, 75px); gap: 8px; }
+    
+    .btn { 
+      border: 2px solid var(--border-dark); border-radius: 8px; font-weight: bold; cursor: pointer;
+      display: flex; justify-content: center; align-items: center; text-transform: uppercase;
+      box-shadow: 2px 2px 0px var(--border-dark); transition: all 0.1s;
+    }
+    .btn:active { box-shadow: 0px 0px 0px var(--border-dark); transform: translate(2px, 2px); }
+    
+    .d-btn { background: #fff; font-size: 28px; }
+    .d-stop { background: var(--danger-red); color: #fff; grid-column: 2; grid-row: 2; font-size: 16px; letter-spacing: 1px; }
+    .btn-run { background: var(--primary-green); color: #fff; width: 100%; padding: 18px; font-size: 18px; margin-top: 10px; }
+    .btn-emergency { background: var(--danger-red); color: #fff; width: 100%; padding: 16px; margin-top: 15px; }
+    .btn-secondary { background: #f1f5f9; color: var(--text-main); width: 100%; padding: 14px; margin-top: 10px; }
+    
+    .empty-space { visibility: hidden; }
+
+    .form-group { margin-bottom: 15px; }
+    label { font-size: 12px; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 5px; text-transform: uppercase; }
+    
+    /* Updated styling for Inputs and Selects */
+    select, input[type="text"], input[type="number"] { 
+      width: 100%; padding: 14px; font-size: 16px; font-weight: 700; color: var(--text-main);
+      border: 2px solid var(--border-dark); border-radius: 8px; background: #fff;
+      box-shadow: 2px 2px 0px var(--border-dark); outline: none;
+    }
+    select { appearance: none; }
+    input:focus { border-color: var(--primary-green); }
+
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .status-badge { background: var(--primary-green); color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .subtitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+    h3 { margin: 0 0 15px 0; font-size: 22px; font-weight: 800; }
+    
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; padding: 15px 0; margin-bottom: 15px; }
+    .stat-val { font-size: 24px; font-weight: 900; color: var(--primary-green); }
+
+    .bottom-nav { 
+      position: fixed; bottom: 0; width: 100%; max-width: 480px; 
+      background: var(--card-bg); border-top: 2px solid var(--border-dark); 
+      display: flex; justify-content: space-around; padding: 12px 0; z-index: 100;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; font-weight: 700; cursor: pointer; width: 25%; }
+    .nav-icon { font-size: 24px; margin-bottom: 4px; transition: transform 0.2s; }
+    .nav-item.active { color: var(--primary-green); }
+    .nav-item.active .nav-icon { transform: translateY(-3px); }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <header>
+    <button class="icon-btn">☰</button>
+    <h1>AgriControl Pro</h1>
+    <button class="icon-btn">⚙️</button>
+  </header>
+
+  <!-- ================= CONTROL TAB ================= -->
+  <div id="control" class="tab-section active content">
+    <div class="page-title">Equipment<br>Control</div>
+    
+    <div class="card dpad-card">
+      <div class="d-pad">
+        <div class="empty-space"></div>
+        <button class="btn d-btn" onmousedown="fireCommand('f')" onmouseup="fireCommand('s')" ontouchstart="fireCommand('f')" ontouchend="fireCommand('s')">↑</button>
+        <div class="empty-space"></div>
+        
+        <button class="btn d-btn" onmousedown="fireCommand('l')" onmouseup="fireCommand('s')" ontouchstart="fireCommand('l')" ontouchend="fireCommand('s')">←</button>
+        <button class="btn d-stop" onclick="fireCommand('s')">STOP</button>
+        <button class="btn d-btn" onmousedown="fireCommand('r')" onmouseup="fireCommand('s')" ontouchstart="fireCommand('r')" ontouchend="fireCommand('s')">→</button>
+        
+        <div class="empty-space"></div>
+        <button class="btn d-btn" onmousedown="fireCommand('b')" onmouseup="fireCommand('s')" ontouchstart="fireCommand('b')" ontouchend="fireCommand('s')">↓</button>
+        <div class="empty-space"></div>
+      </div>
+    </div>
+
+    <!-- NEW ACTUATOR CONTROL CARD -->
+    <div class="card">
+      <h3 style="font-size: 16px; text-transform: uppercase; margin-bottom: 15px; color: var(--text-muted); text-align: center;">Actuator Override</h3>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" style="flex: 1; padding: 20px; font-size: 16px; margin: 0;" onmousedown="fireCommand('u')" onmouseup="fireCommand('s')" ontouchstart="fireCommand('u')" ontouchend="fireCommand('s')">⏫ UP</button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 20px; font-size: 16px; margin: 0;" onmousedown="fireCommand('d')" onmouseup="fireCommand('s')" ontouchstart="fireCommand('d')" ontouchend="fireCommand('s')">⏬ DOWN</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="form-group">
+        <label>1. Select Seed/Crop</label>
+        <select id="mainCropSelect">
+          <option value="">Loading crops...</option>
+        </select>
+      </div>
+      
+      <label>2. Start Operation</label>
+      <button class="btn btn-run" onclick="fireCommand('p')">▷ RUN EQUIPMENT</button>
+    </div>
+  </div>
+
+  <!-- ================= DASHBOARD TAB ================= -->
+  <div id="dashboard" class="tab-section content">
+    <div class="flex-between" style="margin-bottom: 20px;">
+      <h2 style="margin:0; font-size:24px; font-weight:900;">Dashboard</h2>
+      <span class="status-badge" id="live-status">System Online</span>
+    </div>
+
+    <div class="card">
+      <div class="subtitle">🚜 Tractor Alpha</div>
+      <h3>Seeding Operation</h3>
+      
+      <div class="stats-grid">
+        <div>
+          <label>CURRENT CROP</label>
+          <div class="stat-val" id="live-crop">--</div>
+        </div>
+        <div>
+          <label>SPEED</label>
+          <div class="stat-val"><span id="live-speed">0.0</span></div>
+        </div>
+      </div>
+      
+      <button class="btn btn-emergency" onclick="fireEmergency()">EMERGENCY STOP</button>
+    </div>
+  </div>
+
+  <!-- ================= CROPS TAB ================= -->
+  <div id="crops" class="tab-section content">
+    <div class="page-title">Crop Manager</div>
+    
+    <div class="card">
+      <div class="form-group">
+        <label>Edit Existing Crop</label>
+        <select id="editCropSelect" onchange="loadCropDataIntoForm(this.value)">
+          <option value="">-- Select a crop to edit --</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="formTitle">Add / Edit Profile</h3>
+      
+      <div class="form-group">
+        <label>Crop Name</label>
+        <input type="text" id="confName" placeholder="e.g. GroundNut">
+      </div>
+      
+      <div class="form-group">
+        <label>Actuator Push Time (ms)</label>
+        <input type="number" id="confPush" placeholder="e.g. 10000">
+      </div>
+      
+      <div class="form-group">
+        <label>Actuator Pull Time (ms)</label>
+        <input type="number" id="confPull" placeholder="e.g. 10000">
+      </div>
+      
+      <div class="form-group">
+        <label>Drive Speed (PWM 0-255)</label>
+        <input type="number" id="confSpeed" placeholder="e.g. 70">
+      </div>
+      
+      <div class="form-group">
+        <label>Drive Forward Time (ms)</label>
+        <input type="number" id="confDrive" placeholder="e.g. 2000">
+      </div>
+      
+      <div class="form-group">
+        <label>Hopper Open Time (ms)</label>
+        <input type="number" id="confHopper" placeholder="e.g. 800">
+      </div>
+
+      <button class="btn btn-run" onclick="saveCropProfile()">💾 Save to Database</button>
+      <button class="btn btn-secondary" onclick="clearForm()">+ Create New Blank</button>
+    </div>
+  </div>
+
+  <!-- ================= HISTORY TAB ================= -->
+  <div id="history" class="tab-section content">
+    <div class="page-title">History</div>
+    <div class="card">
+      <p style="text-align: center; color: #64748b; font-weight: bold;">Past seeding operations will appear here.</p>
+    </div>
+  </div>
+
+  <!-- ================= BOTTOM NAVIGATION ================= -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('control', this)">
+      <div class="nav-icon">🕹️</div>
+      CONTROL
+    </div>
+    <div class="nav-item" onclick="switchTab('dashboard', this)">
+      <div class="nav-icon">📊</div>
+      DASHBOARD
+    </div>
+    <div class="nav-item" onclick="switchTab('crops', this)">
+      <div class="nav-icon">🌱</div>
+      CROPS
+    </div>
+    <div class="nav-item" onclick="switchTab('history', this)">
+      <div class="nav-icon">📋</div>
+      HISTORY
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // --- 1. FIREBASE CONFIGURATION ---
+  const firebaseConfig = {
+    apiKey: "YOUR_GOOGLE_MAPS_API_KEY",
+    authDomain: "agricontrol-rover.firebaseapp.com",
+    databaseURL: "https://agricontrol-rover-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "agricontrol-rover",
+    storageBucket: "agricontrol-rover.firebasestorage.app",
+    messagingSenderId: "76376951703",
+    appId: "1:76376951703:web:40b5db29b125585c1552d2"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  
+  let globalCropsData = {}; // Stores all crops locally so we can load them into the form
+
+  // --- UI Logic: Tab Switching ---
+  function switchTab(tabId, element) {
+    document.querySelectorAll('.tab-section').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    element.classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
+
+  // --- ROVER CONTROLS ---
+  function fireCommand(cmd) {
+    vibrate();
+    db.ref('rover_control').update({ command: cmd });
+  }
+
+  function fireEmergency() {
+    vibrate();
+    db.ref('rover_control').update({ command: 'e' });
+    alert("Emergency Stop Sent to Rover!");
+  }
+
+  // Update telemetry when main crop dropdown changes
+  document.getElementById('mainCropSelect').addEventListener('change', function(e) {
+    let newCrop = e.target.value;
+    db.ref('rover_telemetry').update({ current_crop: newCrop });
+  });
+
+  // --- DASHBOARD TELEMETRY LISTENER ---
+  db.ref('rover_telemetry').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      if(data.status) document.getElementById('live-status').innerText = data.status;
+      if(data.current_crop) {
+        document.getElementById('live-crop').innerText = data.current_crop;
+        document.getElementById('mainCropSelect').value = data.current_crop;
+      }
+      if(data.speed_kmh !== undefined) document.getElementById('live-speed').innerText = data.speed_kmh;
+    }
+  });
+
+  // --- CROP MANAGER LOGIC ---
+  // Listen for all crops in the database and populate both dropdowns
+  db.ref('crop_profiles').on('value', (snapshot) => {
+    globalCropsData = snapshot.val() || {};
+    
+    let mainSelect = document.getElementById('mainCropSelect');
+    let editSelect = document.getElementById('editCropSelect');
+    
+    // Clear current options
+    mainSelect.innerHTML = '';
+    editSelect.innerHTML = '<option value="">-- Select a crop to edit --</option>';
+
+    // Populate dropdowns with dynamic database keys
+    for (let cropName in globalCropsData) {
+      let optionMain = document.createElement('option');
+      optionMain.value = cropName;
+      optionMain.innerText = cropName;
+      mainSelect.appendChild(optionMain);
+
+      let optionEdit = document.createElement('option');
+      optionEdit.value = cropName;
+      optionEdit.innerText = cropName;
+      editSelect.appendChild(optionEdit);
+    }
+  });
+
+  // When user selects a crop in the Manager, fill the form
+  function loadCropDataIntoForm(cropName) {
+    if(!cropName || !globalCropsData[cropName]) {
+      clearForm();
+      return;
+    }
+    const data = globalCropsData[cropName];
+    document.getElementById('confName').value = cropName;
+    document.getElementById('confPush').value = data.actuator_extend_ms;
+    document.getElementById('confPull').value = data.actuator_retract_ms;
+    document.getElementById('confSpeed').value = data.auto_drive_speed_pwm;
+    document.getElementById('confDrive').value = data.auto_drive_time_ms;
+    document.getElementById('confHopper').value = data.hopper_open_time_ms;
+  }
+
+  // Clear the form to add a new crop
+  function clearForm() {
+    vibrate();
+    document.getElementById('editCropSelect').value = "";
+    document.getElementById('confName').value = "";
+    document.getElementById('confPush').value = "";
+    document.getElementById('confPull').value = "";
+    document.getElementById('confSpeed').value = "";
+    document.getElementById('confDrive').value = "";
+    document.getElementById('confHopper').value = "";
+  }
+
+  // Save the form data directly to Firebase
+  function saveCropProfile() {
+    vibrate();
+    let name = document.getElementById('confName').value.trim();
+    if (name === "") {
+      alert("Please enter a Crop Name!");
+      return;
+    }
+
+    let profileData = {
+      actuator_extend_ms: parseInt(document.getElementById('confPush').value) || 0,
+      actuator_retract_ms: parseInt(document.getElementById('confPull').value) || 0,
+      auto_drive_speed_pwm: parseInt(document.getElementById('confSpeed').value) || 0,
+      auto_drive_time_ms: parseInt(document.getElementById('confDrive').value) || 0,
+      hopper_open_time_ms: parseInt(document.getElementById('confHopper').value) || 0
+    };
+
+    // Write to Firebase
+    db.ref('crop_profiles/' + name).set(profileData)
+      .then(() => {
+        alert(name + " saved successfully to the Cloud!");
+      })
+      .catch((error) => {
+        alert("Error saving: " + error);
+      });
+  }
+</script>
+
+</body>
+</html>
